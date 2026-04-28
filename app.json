@@ -43,6 +43,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a8f197e9-9e45-4f0f-ac54-99761c2b7c9d"
+      }
+    },
+    "owner": "joctan-neves"
   }
 }
