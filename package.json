@@ -4,11 +4,18 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "seed": "tsx scripts/seed/index.ts",
+    "seed:strongs": "tsx scripts/seed/import-strongs.ts",
+    "seed:translations": "tsx scripts/seed/import-translations.ts",
+    "seed:tokens": "tsx scripts/seed/import-tokens.ts",
+    "seed:lxx": "tsx scripts/seed/import-lxx.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -50,6 +57,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.6.0",
     "@types/react": "~19.1.0",
     "babel-plugin-module-resolver": "^5.0.3",
     "better-sqlite3": "^12.9.0",

@@ -8,5 +8,6 @@
       "@db/*": ["./db/*"],
       "@lib/*": ["./lib/*"]
     }
-  }
+  },
+  "exclude": ["node_modules", "app-example"]
 }

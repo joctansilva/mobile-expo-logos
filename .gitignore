@@ -47,8 +47,9 @@ assets/db/bible.db
 assets/db/bible.db-shm
 assets/db/bible.db-wal
 
-# Dados brutos baixados para seed
-scripts/data/
+# Dados brutos baixados para seed (manter diretório, ignorar conteúdo)
+scripts/data/*
+!scripts/data/.gitkeep
 
 # EAS
 .expo/
