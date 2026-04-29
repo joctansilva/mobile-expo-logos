@@ -3,7 +3,20 @@
     "allow": [
       "Bash(pnpm db:generate)",
       "Bash(pnpm add *)",
-      "Bash(pnpm exec *)"
+      "Bash(pnpm exec *)",
+      "Bash(node -e \"require\\('./babel.config.js'\\)\\(require\\('@babel/core'\\)\\)\")",
+      "Bash(node -e \"const c = require\\('./tailwind.config.js'\\); console.log\\('presets:', !!c.presets, '| content paths:', c.content.length, '| colors:', Object.keys\\(c.theme.extend.colors\\).join\\(', '\\)\\)\")",
+      "Bash(node -e \"const c = require\\('./metro.config.js'\\); console.log\\('metro config ok:', typeof c === 'object'\\)\")",
+      "Bash(sed 's/\\\\..*//')",
+      "Bash(pnpm seed *)",
+      "Bash(pnpm rebuild *)",
+      "Bash(npx node-pre-gyp *)",
+      "Bash(npx node-gyp *)",
+      "Bash(pnpm approve-builds *)",
+      "Bash(pnpm install *)",
+      "Bash(node -e ' *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

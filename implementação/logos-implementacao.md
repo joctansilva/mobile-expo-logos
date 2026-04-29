@@ -1163,6 +1163,38 @@ npx drizzle-kit studio --config drizzle.config.ts
 # Ou abrir com DB Browser for SQLite (app gratuito)
 ```
 
+### 4.11 Copiar bible.db para o dispositivo na primeira abertura
+
+O seed roda **na máquina do desenvolvedor**. O `bible.db` gerado vai embutido no bundle do app (EAS Build inclui `assets/db/bible.db` automaticamente).
+
+`expo-sqlite` só abre bancos na pasta de documentos do dispositivo — não direto dos assets. Por isso, na primeira abertura do app é necessário copiar o arquivo:
+
+```typescript
+// db/setup.ts
+import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
+
+const DB_PATH = FileSystem.documentDirectory + 'SQLite/bible.db';
+
+export async function setupBibleDb(): Promise<void> {
+  const { exists } = await FileSystem.getInfoAsync(DB_PATH);
+  if (exists) return; // já copiado em abertura anterior
+
+  await FileSystem.makeDirectoryAsync(
+    FileSystem.documentDirectory + 'SQLite/',
+    { intermediates: true }
+  );
+
+  const asset = Asset.fromModule(require('../assets/db/bible.db'));
+  await asset.downloadAsync();
+  await FileSystem.copyAsync({ from: asset.localUri!, to: DB_PATH });
+}
+```
+
+Chamar `await setupBibleDb()` no início do root `_layout.tsx`, antes de abrir o banco com Drizzle. Exibir uma splash/loading durante a cópia (~2-5s na primeira vez).
+
+> **Atualização do banco em versões futuras:** comparar a versão do arquivo bundado com a versão instalada (salvar no AsyncStorage). Se a versão mudou, copiar novamente — o banco antigo do usuário (`user.db`) não é afetado.
+
 ---
 
 ## 5. Fase 3 — Navegação e Estrutura de Telas

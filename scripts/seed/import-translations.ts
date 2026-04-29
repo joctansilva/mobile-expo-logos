@@ -1,163 +1,115 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { BOOK_NAME_EN_MAP } from './utils';
 
-const DATA_DIR = path.resolve(__dirname, '../data');
+const CSV_DIR = path.resolve(__dirname, '../data/bible_databases/formats/csv');
+
+// Prefixos de ID por tradução (evita colisão de chave primária entre traduções)
+// verse.id = TRANSLATION_OFFSET + book_id * 1_000_000 + chapter * 1_000 + verse
+// KJV: offset 0           (1001001 … 66150176)
+// ACF: offset 1_000_000_000  (1001001001 … 1066150176)
+// LXX: offset 2_000_000_000  (2001001001 … 2066150176)
+export const TRANSLATION_OFFSET: Record<string, number> = {
+  KJV: 0,
+  ACF: 1_000_000_000,
+  LXX: 2_000_000_000,
+};
 
 export function importTranslations(db: Database.Database) {
-  importKjv(db);
-  importAcf(db);
+  importFromCsv(db, 'KJV.csv', 'KJV');
+  importFromCsv(db, 'PorBLivre.csv', 'ACF');
 }
 
-// ─── KJV — scrollmapper/bible_databases/sqlite/t_kjv.db ──────────────────────
-function importKjv(db: Database.Database) {
-  const kjvPath = path.join(DATA_DIR, 'bible_databases/sqlite/t_kjv.db');
+// Parseia CSV com header "Book,Chapter,Verse,Text"
+// Livros usam nomes ingleses por extenso (ex: "Genesis", "1 Kings")
+function importFromCsv(db: Database.Database, filename: string, translation: string) {
+  const csvPath = path.join(CSV_DIR, filename);
 
-  if (!fs.existsSync(kjvPath)) {
-    console.warn('  ! KJV não encontrado. Clone:');
-    console.warn('    git clone --depth 1 https://github.com/scrollmapper/bible_databases.git scripts/data/bible_databases');
+  if (!fs.existsSync(csvPath)) {
+    console.warn(`  ! ${filename} não encontrado em ${CSV_DIR}`);
     return;
   }
-
-  const src = new Database(kjvPath, { readonly: true });
 
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO verses (id, book_id, chapter, verse, translation, text)
     VALUES (@id, @book_id, @chapter, @verse, @translation, @text)
   `);
 
-  const rows = src.prepare('SELECT b, c, v, t FROM t_kjv ORDER BY b, c, v').all() as {
-    b: number; c: number; v: number; t: string;
-  }[];
-
-  const insertAll = db.transaction(() => {
-    for (const row of rows) {
-      stmt.run({
-        id: row.b * 1_000_000 + row.c * 1_000 + row.v,
-        book_id: row.b,
-        chapter: row.c,
-        verse: row.v,
-        translation: 'KJV',
-        // Texto KJV no scrollmapper tem números Strong inline: "In H7225 the beginning..."
-        // Remover: H/G seguido de dígitos
-        text: row.t.replace(/\b[HG]\d+\b/g, '').replace(/\s{2,}/g, ' ').trim(),
-      });
-    }
-  });
-
-  insertAll();
-  src.close();
-  console.log(`  → ${rows.length} versículos KJV`);
-}
-
-// ─── ACF — Almeida Corrigida Fiel (domínio público) ──────────────────────────
-// Suporta dois formatos:
-//   1. SQLite scrollmapper (t_acf.db ou t_bra.db) — preferido
-//   2. CSV com colunas: book_id,chapter,verse,text
-function importAcf(db: Database.Database) {
-  // Tentar SQLite scrollmapper primeiro
-  for (const filename of ['t_acf.db', 't_bra.db', 't_almeida.db']) {
-    const dbPath = path.join(DATA_DIR, 'bible_databases/sqlite', filename);
-    if (fs.existsSync(dbPath)) {
-      importAcfFromSqlite(db, dbPath);
-      return;
-    }
-  }
-
-  // Tentar CSV (eBible.org ou outro)
-  const csvPath = path.join(DATA_DIR, 'acf.csv');
-  if (fs.existsSync(csvPath)) {
-    importAcfFromCsv(db, csvPath);
-    return;
-  }
-
-  console.warn('  ! ACF não encontrado. Opções:');
-  console.warn('    1. Verificar se bible_databases tem t_acf.db ou t_bra.db');
-  console.warn('    2. Baixar CSV de https://ebible.org e salvar em scripts/data/acf.csv');
-  console.warn('       Formato esperado: book_id,chapter,verse,text (sem cabeçalho)');
-}
-
-function importAcfFromSqlite(db: Database.Database, srcPath: string) {
-  const src = new Database(srcPath, { readonly: true });
-
-  // Detectar nome da tabela (scrollmapper usa t_[abbrev])
-  const tables = src
-    .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 't_%'`)
-    .all() as { name: string }[];
-
-  if (!tables.length) {
-    console.warn(`  ! Nenhuma tabela t_* encontrada em ${path.basename(srcPath)}`);
-    src.close();
-    return;
-  }
-
-  const tableName = tables[0].name;
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO verses (id, book_id, chapter, verse, translation, text)
-    VALUES (@id, @book_id, @chapter, @verse, @translation, @text)
-  `);
-
-  const rows = src.prepare(`SELECT b, c, v, t FROM ${tableName} ORDER BY b, c, v`).all() as {
-    b: number; c: number; v: number; t: string;
-  }[];
-
-  const insertAll = db.transaction(() => {
-    for (const row of rows) {
-      stmt.run({
-        id: row.b * 1_000_000 + row.c * 1_000 + row.v,
-        book_id: row.b,
-        chapter: row.c,
-        verse: row.v,
-        translation: 'ACF',
-        text: row.t.trim(),
-      });
-    }
-  });
-
-  insertAll();
-  src.close();
-  console.log(`  → ${rows.length} versículos ACF (fonte: ${path.basename(srcPath)})`);
-}
-
-function importAcfFromCsv(db: Database.Database, csvPath: string) {
-  const lines = fs.readFileSync(csvPath, 'utf-8').split('\n').filter(Boolean);
-
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO verses (id, book_id, chapter, verse, translation, text)
-    VALUES (@id, @book_id, @chapter, @verse, @translation, @text)
-  `);
+  const content = fs.readFileSync(csvPath, 'utf-8');
+  const lines = content.split('\n');
 
   let count = 0;
+  let skipped = 0;
+
   const insertAll = db.transaction(() => {
-    for (const line of lines) {
-      // Formato: book_id,chapter,verse,text
-      // Texto pode conter vírgulas — split no máximo 3 campos
-      const commaIdx = [
-        line.indexOf(','),
-        line.indexOf(',', line.indexOf(',') + 1),
-        line.indexOf(',', line.indexOf(',', line.indexOf(',') + 1) + 1),
-      ];
-      if (commaIdx[2] === -1) continue;
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
 
-      const bookId = parseInt(line.slice(0, commaIdx[0]), 10);
-      const chapter = parseInt(line.slice(commaIdx[0] + 1, commaIdx[1]), 10);
-      const verse = parseInt(line.slice(commaIdx[1] + 1, commaIdx[2]), 10);
-      const text = line.slice(commaIdx[2] + 1).trim().replace(/^"|"$/g, '');
+      const parsed = parseCsvLine(line);
+      if (!parsed) continue;
 
-      if (isNaN(bookId) || isNaN(chapter) || isNaN(verse) || !text) continue;
+      const { book, chapter, verse, text } = parsed;
+      const bookId = BOOK_NAME_EN_MAP[book];
 
+      if (!bookId) {
+        skipped++;
+        continue;
+      }
+
+      const offset = TRANSLATION_OFFSET[translation] ?? 0;
       stmt.run({
-        id: bookId * 1_000_000 + chapter * 1_000 + verse,
+        id: offset + bookId * 1_000_000 + chapter * 1_000 + verse,
         book_id: bookId,
         chapter,
         verse,
-        translation: 'ACF',
-        text,
+        translation,
+        text: text.trim(),
       });
       count++;
     }
   });
 
   insertAll();
-  console.log(`  → ${count} versículos ACF (fonte: CSV)`);
+  if (skipped > 0) console.warn(`  ! ${skipped} linhas ignoradas (livros não mapeados)`);
+  console.log(`  → ${count.toLocaleString()} versículos ${translation} (fonte: ${filename})`);
+}
+
+// Parseia uma linha CSV com possíveis aspas e vírgulas no texto
+function parseCsvLine(line: string): { book: string; chapter: number; verse: number; text: string } | null {
+  // Formato: Book,Chapter,Verse,Text
+  // "Book" pode conter espaços mas não vírgulas
+  // "Text" pode conter vírgulas — é tudo após o 3º campo
+
+  // Encontrar as 3 primeiras vírgulas fora de aspas
+  const fields: string[] = [];
+  let inQuote = false;
+  let field = '';
+  let fieldCount = 0;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuote = !inQuote;
+    } else if (ch === ',' && !inQuote && fieldCount < 3) {
+      fields.push(field);
+      field = '';
+      fieldCount++;
+    } else {
+      field += ch;
+    }
+  }
+  fields.push(field); // último campo (text)
+
+  if (fields.length < 4) return null;
+
+  const book = fields[0].trim();
+  const chapter = parseInt(fields[1].trim(), 10);
+  const verse = parseInt(fields[2].trim(), 10);
+  const text = fields[3].replace(/^"|"$/g, '').trim();
+
+  if (!book || isNaN(chapter) || isNaN(verse) || !text) return null;
+
+  return { book, chapter, verse, text };
 }

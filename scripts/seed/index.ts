@@ -32,6 +32,9 @@ async function main() {
   db.pragma('cache_size = -65536'); // 64MB
   db.pragma('temp_store = MEMORY');
   db.pragma('mmap_size = 268435456'); // 256MB
+  // Desabilitar FK checks durante o seed: tokens podem referenciar versículos
+  // de variantes textuais não presentes nas traduções importadas
+  db.pragma('foreign_keys = OFF');
 
   console.log('\n1/7 Criando schema...');
   createSchema(db);

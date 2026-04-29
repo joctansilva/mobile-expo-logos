@@ -35,8 +35,9 @@ export async function importStrongs(db: Database.Database) {
   } else {
     const raw = fs.readFileSync(hebrewPath, 'utf-8');
     const data = parseStrongsJs(raw);
+    // As chaves já incluem o prefixo: {"H1": ..., "H2": ...}
     const entries = Object.entries(data).map(([key, val]) =>
-      parseEntry(`H${key}`, 'H', val as StrongsEntry)
+      parseEntry(key, 'H', val as StrongsEntry)
     );
     insertBatch(entries);
     console.log(`  → ${entries.length} entradas Strong hebraico (H)`);
@@ -49,22 +50,26 @@ export async function importStrongs(db: Database.Database) {
   } else {
     const raw = fs.readFileSync(greekPath, 'utf-8');
     const data = parseStrongsJs(raw);
+    // As chaves já incluem o prefixo: {"G1": ..., "G2": ...}
     const entries = Object.entries(data).map(([key, val]) =>
-      parseEntry(`G${key}`, 'G', val as StrongsEntry)
+      parseEntry(key, 'G', val as StrongsEntry)
     );
     insertBatch(entries);
     console.log(`  → ${entries.length} entradas Strong grego (G)`);
   }
 }
 
-// Extrai o objeto JSON do arquivo JS (formato: "var name = {...};")
+// Extrai o objeto JSON do arquivo JS (formato: comentários + "var name = {...};")
 function parseStrongsJs(raw: string): Record<string, unknown> {
-  // Remove "var nome_da_variavel = " do início e ";" do fim
-  const jsonStr = raw
-    .replace(/^\s*var\s+\w+\s*=\s*/, '')
-    .replace(/\s*;\s*$/, '')
-    .trim();
-  return JSON.parse(jsonStr);
+  // Localizar a declaração "var nome = " e extrair o JSON a partir do "{"
+  const varMatch = raw.match(/var\s+\w+\s*=\s*(\{[\s\S]*\})\s*;?\s*$/);
+  if (varMatch) return JSON.parse(varMatch[1]);
+
+  // Fallback: tentar encontrar o primeiro "{" e parsear dali
+  const braceStart = raw.indexOf('{');
+  const braceEnd = raw.lastIndexOf('}');
+  if (braceStart === -1 || braceEnd === -1) throw new Error('JSON não encontrado no arquivo Strong\'s');
+  return JSON.parse(raw.slice(braceStart, braceEnd + 1));
 }
 
 function parseEntry(id: string, language: 'H' | 'G', val: StrongsEntry) {
