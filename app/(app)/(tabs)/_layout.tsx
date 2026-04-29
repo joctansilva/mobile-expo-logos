@@ -1,16 +1,27 @@
 import { Tabs } from "expo-router";
-import { BookOpen, Search, Library, User } from "lucide-react-native";
+import { Home, BookOpen, Search, Library, User } from "lucide-react-native";
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#4F6AF5",
-        tabBarInactiveTintColor: "#9CA3AF",
+        tabBarActiveTintColor: "#D4AF37",
+        tabBarInactiveTintColor: "#8B7355",
         tabBarStyle: {
-          borderTopWidth: 0.5,
-          borderTopColor: "#E5E7EB",
+          backgroundColor: "#3F3024",
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          textTransform: "uppercase",
+          letterSpacing: 1,
+          marginBottom: 2,
         },
       }}
     >
@@ -18,9 +29,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Início",
-          tabBarIcon: ({ color, size }) => (
-            <BookOpen color={color} size={size} />
-          ),
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -54,9 +63,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Perfil",
-          tabBarIcon: ({ color, size }) => (
-            <User color={color} size={size} />
-          ),
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
     </Tabs>

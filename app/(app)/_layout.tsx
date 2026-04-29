@@ -5,6 +5,8 @@ export default function AppLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="reader" />
+      <Stack.Screen name="book-select" />
+      <Stack.Screen name="chapter-select" />
       <Stack.Screen
         name="strong/[id]"
         options={{

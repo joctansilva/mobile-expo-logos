@@ -16,7 +16,8 @@
       "Bash(pnpm install *)",
       "Bash(node -e ' *)",
       "Bash(pnpm typecheck *)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(node *)"
     ]
   }
 }

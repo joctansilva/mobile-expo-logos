@@ -1,63 +1,87 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, ScrollView, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { Plus } from "lucide-react-native";
 import { useDailyVerse } from "@features/bible/hooks/useDailyVerse";
 import { useLastPosition } from "@features/bible/hooks/useLastPosition";
+import { useBibleStore } from "@features/bible/store/bibleStore";
+import { HomeHeader } from "@features/bible/components/home/HomeHeader";
+import { HeroImage } from "@features/bible/components/home/HeroImage";
+import { DailyVerseCard } from "@features/bible/components/home/DailyVerseCard";
+import { ContinueReadingCard } from "@features/bible/components/home/ContinueReadingCard";
+import { RecentChips } from "@features/bible/components/home/RecentChips";
+import { StudyToolsGrid } from "@features/bible/components/home/StudyToolsGrid";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { verse } = useDailyVerse();
   const { lastPosition } = useLastPosition();
+  const recentChapters = useBibleStore((s) => s.recentChapters);
 
   return (
-    <ScrollView
-      className="flex-1 bg-white dark:bg-gray-950"
-      contentContainerClassName="px-5 pt-16 pb-10"
-    >
-      <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-        λόγος
-      </Text>
+    <View style={{ flex: 1, backgroundColor: "#F5EDD8" }}>
+      {/* Status bar area takes the brown color */}
+      <View style={{ backgroundColor: "#3F3024" }}>
+        <SafeAreaView edges={["top"]}>
+          <HomeHeader />
+        </SafeAreaView>
+      </View>
 
-      {verse && (
-        <TouchableOpacity
-          className="bg-primary-50 dark:bg-primary-900 rounded-2xl p-5 mb-5"
-          activeOpacity={0.8}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <HeroImage />
+
+        {verse && <DailyVerseCard text={verse.text} reference={verse.reference} />}
+
+        <ContinueReadingCard
+          bookName={lastPosition.book_name}
+          chapter={lastPosition.chapter}
           onPress={() =>
             router.push(
-              `/(app)/reader?book=${verse.book_id}&chapter=${verse.chapter}`,
+              `/(app)/reader?book=${lastPosition.book_id}&chapter=${lastPosition.chapter}`,
             )
           }
-        >
-          <Text className="text-xs text-primary-600 dark:text-primary-300 mb-2 font-semibold tracking-widest">
-            VERSÍCULO DO DIA
-          </Text>
-          <Text className="text-gray-800 dark:text-gray-100 text-base leading-relaxed mb-3">
-            {verse.text}
-          </Text>
-          <Text className="text-gray-500 dark:text-gray-400 text-sm font-medium">
-            {verse.reference}
-          </Text>
-        </TouchableOpacity>
-      )}
+        />
 
+        <RecentChips
+          items={recentChapters}
+          onPress={(item) =>
+            router.push(
+              `/(app)/reader?book=${item.book_id}&chapter=${item.chapter}`,
+            )
+          }
+        />
+
+        <StudyToolsGrid />
+      </ScrollView>
+
+      {/* FAB */}
       <TouchableOpacity
-        className="flex-row items-center bg-gray-100 dark:bg-gray-800 rounded-2xl p-4"
-        activeOpacity={0.8}
-        onPress={() =>
-          router.push(
-            `/(app)/reader?book=${lastPosition.book_id}&chapter=${lastPosition.chapter}`,
-          )
-        }
+        activeOpacity={0.85}
+        style={{
+          position: "absolute",
+          bottom: 24,
+          right: 24,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: "#3F3024",
+          alignItems: "center",
+          justifyContent: "center",
+          borderWidth: 1,
+          borderColor: "rgba(212,175,55,0.4)",
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
       >
-        <View className="flex-1">
-          <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-semibold tracking-widest">
-            CONTINUAR LEITURA
-          </Text>
-          <Text className="font-semibold text-gray-900 dark:text-white text-base">
-            {lastPosition.book_name} {lastPosition.chapter}
-          </Text>
-        </View>
-        <Text className="text-primary-500 text-xl font-light">→</Text>
+        <Plus color="#D4AF37" size={24} strokeWidth={2.5} />
       </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 }
