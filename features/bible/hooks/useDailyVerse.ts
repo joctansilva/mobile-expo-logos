@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { eq, and } from "drizzle-orm";
-import { bibleDb } from "@db/client";
+import { getBibleDb } from "@db/client";
 import { verses, books } from "@db/schema";
 import { useBibleStore } from "../store/bibleStore";
 
@@ -45,7 +45,7 @@ export function useDailyVerse() {
   const query = useQuery({
     queryKey: ["daily-verse", verseId, translation],
     queryFn: async () => {
-      const rows = await bibleDb
+      const rows = await getBibleDb()
         .select({
           id: verses.id,
           book_id: verses.book_id,

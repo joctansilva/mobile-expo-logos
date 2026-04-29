@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { eq, and, gte, lte } from "drizzle-orm";
-import { bibleDb } from "@db/client";
+import { getBibleDb } from "@db/client";
 import { verses, verseTokens } from "@db/schema";
 import { useBibleStore } from "../store/bibleStore";
 
@@ -37,7 +37,7 @@ export function useChapter(bookId: number, chapter: number) {
   const versesQuery = useQuery({
     queryKey: ["chapter", bookId, chapter, translation],
     queryFn: async () => {
-      const rows = await bibleDb
+      const rows = await getBibleDb()
         .select()
         .from(verses)
         .where(
@@ -62,7 +62,7 @@ export function useChapter(bookId: number, chapter: number) {
   const tokensQuery = useQuery({
     queryKey: ["tokens", bookId, chapter],
     queryFn: async () => {
-      const rows = await bibleDb
+      const rows = await getBibleDb()
         .select()
         .from(verseTokens)
         .where(
